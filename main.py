@@ -3,14 +3,14 @@ import sqlite3
 from sklearn.cluster import KMeans
 
 #loading the data into pandas
-players = pd.read_csv("../data/raw/players.csv")
-player_data = pd.read_csv("../data/raw/player_data.csv")
-stats = pd.read_csv("../data/raw/seasons_stats.csv")
+players = pd.read_csv("data/raw/players.csv")
+player_data = pd.read_csv("data/raw/player_data.csv")
+stats = pd.read_csv("data/raw/seasons_stats.csv")
 
 #clean the columns
-players = players.loc[:, ~players.columns.str.contains("^Unnamed")]#remove unnamed columns
-player_data = player_data.loc[:, ~player_data.columns.str.contains("^Unnamed")]
-stats = stats.loc[:, ~stats.columns.str.contains("^Unnamed")]
+players = players[[col for col in players.columns if "Unnamed" not in col]]#remove unnamed columns
+player_data = player_data[[col for col in player_data.columns if "Unnamed" not in col]]
+stats = stats[[col for col in stats.columns if "Unnamed" not in col]]
 
 #fix player names mix up
 player_data.rename(columns={"name": "Player"}, inplace=True)#rename name to Player to match other datasets
@@ -29,7 +29,7 @@ df.columns = df.columns.str.lower().str.replace(" ", "_")#convert to lowercase a
 #handle all the missing values
 df = df.dropna(subset=["pts", "ast", "trb"], how="all")#drop rows where all three key stats are missing
 
-df.to_csv("../data/processed/nba_clean.csv", index=False)#save the cleaned data to a new CSV file
+df.to_csv("data/processed/nba_clean.csv", index=False)#save the cleaned data to a new CSV file
 
 #clustering
 features = df[["pts", "ast", "trb"]].dropna()#select the stats we want and drop rows with missing values for clustering
@@ -42,12 +42,12 @@ df = df.loc[features.index]
 df["cluster"] = features["cluster"]#add the cluster labels back
 
 
-conn = sqlite3.connect("../data/processed/nba.db")#save the cleaned and clustered data to SQLite
+conn = sqlite3.connect("data/processed/nba.db")#save the cleaned and clustered data to SQLite
 df.to_sql("nba_stats", conn, if_exists="replace", index=False)#save the data to a table in the database
 conn.close()
 
 #correlation between stats/heatmap
-conn = sqlite3.connect("../data/processed/nba.db")#connecting to sqlite
+conn = sqlite3.connect("data/processed/nba.db")#connecting to sqlite
 query = """
 SELECT pts, ast, trb, stl, blk
 FROM nba_stats
@@ -59,7 +59,7 @@ corr = data.corr()#set corr as the heatmap of the selected stats
 print(corr)#print the heatmap to console
 
 #points over time
-conn = sqlite3.connect("../data/processed/nba.db")#connecting to sqlite
+conn = sqlite3.connect("data/processed/nba.db")#connecting to sqlite
 query = """
 SELECT year, AVG(pts) as avg_pts
 FROM nba_stats
@@ -69,10 +69,10 @@ ORDER BY year
 #selecting the year and average points, from nba_stats/the sqlite, grouping and ordering by year so we can see the trend of points over time
 result = pd.read_sql(query, conn)#load the query results into result
 conn.close()#close the connection
-result.to_csv("../data/processed/points_over_time.csv", index=False)#save the results to a new CVS file for excel
+result.to_csv("data/processed/points_over_time.csv", index=False)#save the results to a new CVS file for excel
 
 #cluster
-conn = sqlite3.connect("../data/processed/nba.db")#connecting to sqlite
+conn = sqlite3.connect("data/processed/nba.db")#connecting to sqlite
 query = """
 SELECT cluster, AVG(pts) as avg_pts, AVG(ast) as avg_ast, AVG(trb) as avg_trb
 FROM nba_stats
@@ -82,4 +82,4 @@ GROUP BY cluster
 cluster_result = pd.read_sql(query, conn)#load the query results into cluster_result
 conn.close()#close the connection
 print(cluster_result)#print the cluster summary to console
-cluster_result.to_csv("../data/processed/cluster_summary.csv", index=False)#save the cluster summary to a new CSV file for excel
+cluster_result.to_csv("data/processed/cluster_summary.csv", index=False)#save the cluster summary to a new CSV file for excel
